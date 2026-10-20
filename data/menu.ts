@@ -12,7 +12,7 @@ export type MenuItem = {
 export const menuItems: MenuItem[] = [
   {
     id: "food-1",
-    restaurantId: "1",
+    restaurantId: "addis-kitchen",
     name: "Special Beyaynetu",
     description: "A colorful selection of Ethiopian vegetarian dishes.",
     price: 220,
@@ -22,7 +22,7 @@ export const menuItems: MenuItem[] = [
   },
   {
     id: "food-2",
-    restaurantId: "1",
+    restaurantId: "addis-kitchen",
     name: "Doro Wot",
     description: "Traditional spicy chicken stew served with injera.",
     price: 380,
@@ -32,7 +32,7 @@ export const menuItems: MenuItem[] = [
   },
   {
     id: "food-3",
-    restaurantId: "1",
+    restaurantId: "addis-kitchen",
     name: "Shiro Wot",
     description: "Comforting Ethiopian chickpea stew served with injera.",
     price: 180,
@@ -42,7 +42,7 @@ export const menuItems: MenuItem[] = [
   },
   {
     id: "food-4",
-    restaurantId: "2",
+    restaurantId: "green-platter",
     name: "Fresh Garden Bowl",
     description: "A fresh mix of vegetables and healthy ingredients.",
     price: 250,
@@ -52,7 +52,7 @@ export const menuItems: MenuItem[] = [
   },
   {
     id: "food-5",
-    restaurantId: "2",
+    restaurantId: "green-platter",
     name: "Avocado Salad",
     description: "Fresh avocado and seasonal vegetables.",
     price: 200,
@@ -62,7 +62,7 @@ export const menuItems: MenuItem[] = [
   },
   {
     id: "food-6",
-    restaurantId: "3",
+    restaurantId: "coffee-house",
     name: "Ethiopian Coffee",
     description: "Freshly prepared Ethiopian coffee.",
     price: 80,
@@ -72,9 +72,9 @@ export const menuItems: MenuItem[] = [
   },
   {
     id: "food-7",
-    restaurantId: "3",
+    restaurantId: "coffee-house",
     name: "Coffee and Snack Combo",
-    description: "A coffee served with a small traditional snack.",
+    description: "Coffee served with a small traditional snack.",
     price: 150,
     image:
       "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800",
