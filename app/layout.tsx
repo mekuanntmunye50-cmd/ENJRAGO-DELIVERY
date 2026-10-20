@@ -1,13 +1,13 @@
 
 import type { Metadata } from "next";
-import Header from "../components/layout/Header";
-import Footer from "../components/layout/Footer";
 import "./globals.css";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
-  title: "EnjeraGo | Ethiopian Food Delivered",
+  title: "EnjeraGo | Ethiopian Food, Delivered with Love",
   description:
-    "Discover Ethiopian restaurants, order your favorite dishes, and enjoy delicious food delivered to your door.",
+    "Discover Ethiopian restaurants, explore delicious dishes, and order your favorite meals with EnjeraGo.",
 };
 
 export default function RootLayout({

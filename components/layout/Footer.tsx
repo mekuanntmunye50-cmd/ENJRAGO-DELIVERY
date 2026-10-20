@@ -1,55 +1,48 @@
 
 import Link from "next/link";
-import Container from "./Container";
 
 export default function Footer() {
   return (
     <footer className="site-footer">
-      <Container>
-        <div className="footer-grid">
-          <div className="footer-brand">
-            <Link href="/" className="brand footer-logo">
-              <span className="brand-mark">E</span>
-              <span>
-                Enjera<span className="brand-accent">Go</span>
-              </span>
-            </Link>
+      <div className="container footer-grid">
+        <div>
+          <Link href="/" className="brand footer-brand">
+            <span className="brand-mark">E</span>
+            <span>
+              Enjera<span className="brand-highlight">Go</span>
+            </span>
+          </Link>
 
-            <p>
-              Bringing the rich flavors of Ethiopia to your
-              doorstep, one delicious meal at a time.
-            </p>
-          </div>
-
-          <div>
-            <h3>Explore</h3>
-            <Link href="/">Home</Link>
-            <Link href="/restaurants">Restaurants</Link>
-            <Link href="/cart">Your cart</Link>
-          </div>
-
-          <div>
-            <h3>Your account</h3>
-            <Link href="/login">Sign in</Link>
-            <Link href="/register">Create account</Link>
-            <Link href="/orders">My orders</Link>
-          </div>
-
-          <div>
-            <h3>Need help?</h3>
-            <Link href="/contact">Contact us</Link>
-            <p>Fresh food. Local flavor. Delivered with care.</p>
-          </div>
-        </div>
-
-        <div className="footer-bottom">
           <p>
-            © {new Date().getFullYear()} EnjeraGo. All rights
-            reserved.
+            Bringing Ethiopia&apos;s favorite flavors closer to your door.
+            Good food, warm hospitality, delivered with care.
           </p>
-          <p>Made with care for Ethiopian food lovers.</p>
         </div>
-      </Container>
+
+        <div>
+          <h3>Explore</h3>
+          <Link href="/">Home</Link>
+          <Link href="/restaurants">Restaurants</Link>
+          <Link href="/orders">My Orders</Link>
+        </div>
+
+        <div>
+          <h3>Help</h3>
+          <Link href="/contact">Contact us</Link>
+          <Link href="/login">Your account</Link>
+          <Link href="/cart">Shopping cart</Link>
+        </div>
+
+        <div>
+          <h3>Our promise</h3>
+          <p>Fresh flavors. Trusted restaurants. A better way to enjoy food.</p>
+          <p className="footer-location">Made with ♥ in Ethiopia</p>
+        </div>
+      </div>
+
+      <div className="container footer-bottom">
+        <p>© {new Date().getFullYear()} EnjeraGo. All rights reserved.</p>
+      </div>
     </footer>
   );
 }
