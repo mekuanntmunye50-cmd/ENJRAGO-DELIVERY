@@ -1,43 +1,55 @@
 
 import Link from "next/link";
+import Container from "./Container";
 
 export default function Footer() {
   return (
-    <footer className="bg-gray-950 text-gray-300">
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-3 lg:px-8">
-        <div>
-          <Link href="/" className="text-2xl font-extrabold text-white">
-            Enjera<span className="text-amber-400">Go</span>
-          </Link>
+    <footer className="site-footer">
+      <Container>
+        <div className="footer-grid">
+          <div className="footer-brand">
+            <Link href="/" className="brand footer-logo">
+              <span className="brand-mark">E</span>
+              <span>
+                Enjera<span className="brand-accent">Go</span>
+              </span>
+            </Link>
 
-          <p className="mt-4 max-w-sm text-sm leading-7 text-gray-400">
-            Authentic Ethiopian food, delivered to your door.
-            Discover local restaurants and enjoy your favorite dishes.
+            <p>
+              Bringing the rich flavors of Ethiopia to your
+              doorstep, one delicious meal at a time.
+            </p>
+          </div>
+
+          <div>
+            <h3>Explore</h3>
+            <Link href="/">Home</Link>
+            <Link href="/restaurants">Restaurants</Link>
+            <Link href="/cart">Your cart</Link>
+          </div>
+
+          <div>
+            <h3>Your account</h3>
+            <Link href="/login">Sign in</Link>
+            <Link href="/register">Create account</Link>
+            <Link href="/orders">My orders</Link>
+          </div>
+
+          <div>
+            <h3>Need help?</h3>
+            <Link href="/contact">Contact us</Link>
+            <p>Fresh food. Local flavor. Delivered with care.</p>
+          </div>
+        </div>
+
+        <div className="footer-bottom">
+          <p>
+            © {new Date().getFullYear()} EnjeraGo. All rights
+            reserved.
           </p>
+          <p>Made with care for Ethiopian food lovers.</p>
         </div>
-
-        <div>
-          <h2 className="font-bold text-white">Quick Links</h2>
-          <ul className="mt-4 space-y-3 text-sm">
-            <li><Link href="/" className="hover:text-amber-400">Home</Link></li>
-            <li><Link href="/restaurants" className="hover:text-amber-400">Restaurants</Link></li>
-            <li><Link href="/orders" className="hover:text-amber-400">My Orders</Link></li>
-            <li><Link href="/contact" className="hover:text-amber-400">Contact Us</Link></li>
-          </ul>
-        </div>
-
-        <div>
-          <h2 className="font-bold text-white">Our Promise</h2>
-          <p className="mt-4 text-sm leading-7 text-gray-400">
-            Delicious local food, convenient ordering, and a better way
-            to discover Ethiopian restaurants.
-          </p>
-        </div>
-      </div>
-
-      <div className="border-t border-gray-800 px-4 py-5 text-center text-xs text-gray-500">
-        © {new Date().getFullYear()} EnjeraGo. Built with care in Ethiopia.
-      </div>
+      </Container>
     </footer>
   );
 }
