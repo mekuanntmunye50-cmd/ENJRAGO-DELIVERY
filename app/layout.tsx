@@ -1,13 +1,13 @@
 
 import type { Metadata } from "next";
+import { CartProvider } from "../app/cart/CartContext";
+import Header from "../components/layout/Header";
+import Footer from "../components/layout/Footer";
 import "./globals.css";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
-  title: "EnjeraGo | Ethiopian Food, Delivered with Love",
-  description:
-    "Discover Ethiopian restaurants, explore delicious dishes, and order your favorite meals with EnjeraGo.",
+  title: "EnjeraGo | Ethiopian Food Delivery",
+  description: "Discover Ethiopian food and order your favorites with EnjeraGo.",
 };
 
 export default function RootLayout({
@@ -18,9 +18,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Header />
-        <main>{children}</main>
-        <Footer />
+        <CartProvider>
+          <Header />
+          <main>{children}</main>
+          <Footer />
+        </CartProvider>
       </body>
     </html>
   );
