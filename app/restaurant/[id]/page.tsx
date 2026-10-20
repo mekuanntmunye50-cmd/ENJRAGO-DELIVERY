@@ -4,22 +4,33 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { restaurants } from "../../../data/restaurants";
+import { menuItems } from "../../../data/menu";
+import { useCart } from "../../cart/CartContext";
 
 export default function RestaurantDetailPage() {
   const params = useParams<{ id: string }>();
+
   const restaurant = restaurants.find(
-    (item) => String(item.id) === params.id
+    (item) => String(item.id) === String(params.id)
   );
+
+  const { addItem, cartCount } = useCart();
 
   if (!restaurant) {
     return (
       <main className="restaurants-page">
         <h1>Restaurant not found</h1>
-        <p>We couldn't find that restaurant.</p>
-        <Link href="/restaurants">Back to restaurants</Link>
+        <Link href="/restaurants">
+          Back to restaurants
+        </Link>
       </main>
     );
   }
+
+  const restaurantMenu = menuItems.filter(
+    (item) =>
+      String(item.restaurantId) === String(restaurant.id)
+  );
 
   return (
     <main className="restaurant-detail">
@@ -47,17 +58,76 @@ export default function RestaurantDetailPage() {
               : `${restaurant.deliveryFee} ETB delivery`}
           </span>
         </div>
+      </section>
 
-        <h2>Welcome to {restaurant.name}</h2>
-        <p>
-          Explore the restaurant's food selection and get ready
-          to enjoy your next meal with EnjeraGo.
-        </p>
+      <section className="menu-section">
+        <div className="menu-heading">
+          <div>
+            <p className="eyebrow">MADE WITH CARE</p>
+            <h2>Explore the menu</h2>
+          </div>
 
-        <p className="menu-next-step">
-          The next milestone is to load this restaurant's menu
-          and allow customers to add dishes to their cart.
-        </p>
+          <Link href="/cart" className="menu-cart-link">
+            Cart ({cartCount})
+          </Link>
+        </div>
+
+        {restaurantMenu.length === 0 ? (
+          <p>
+            No menu items are available for this restaurant yet.
+          </p>
+        ) : (
+          <div className="menu-grid">
+            {restaurantMenu.map((food) => (
+              <article className="menu-card" key={food.id}>
+                <Link
+                  href={`/food/${food.id}`}
+                  className="menu-food-link"
+                  aria-label={`View details for ${food.name}`}
+                >
+                  <img
+                    src={food.image}
+                    alt={food.name}
+                  />
+                </Link>
+
+                <div className="menu-card-content">
+                  <span className="menu-category">
+                    {food.category}
+                  </span>
+
+                  <Link
+                    href={`/food/${food.id}`}
+                    className="menu-food-title-link"
+                  >
+                    <h3>{food.name}</h3>
+                  </Link>
+
+                  <p>{food.description}</p>
+
+                  <div className="menu-card-bottom">
+                    <strong>{food.price} ETB</strong>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        addItem({
+                          id: food.id,
+                          restaurantId: food.restaurantId,
+                          name: food.name,
+                          price: food.price,
+                          image: food.image,
+                        })
+                      }
+                    >
+                      + Add
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </main>
   );
