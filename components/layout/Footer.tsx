@@ -1,6 +1,8 @@
 
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default function Footer() {
   return (
     <footer className="site-footer">
@@ -41,7 +43,7 @@ export default function Footer() {
       </div>
 
       <div className="container footer-bottom">
-        <p>© {new Date().getFullYear()} EnjeraGo. All rights reserved.</p>
+        <p>© 2025 EnjeraGo. All rights reserved.</p>
       </div>
     </footer>
   );
