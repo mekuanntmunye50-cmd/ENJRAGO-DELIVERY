@@ -167,7 +167,7 @@ export default function LoginPage() {
         </div>
 
         <p className="copyright">
-          © {new Date().getFullYear()} EnjeraGo. Made with ♥ in Ethiopia.
+          © 2025 EnjeraGo. Made with ♥ in Ethiopia.
         </p>
       </section>
 
