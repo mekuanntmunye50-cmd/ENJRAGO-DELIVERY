@@ -2,19 +2,20 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { useParams } from "next/navigation";
 import { menuItems } from "../../../data/menu";
 
-export default function FoodDetailPage() {
+function FoodDetailContent() {
   const params = useParams<{ id: string }>();
   const foodId = params.id;
 
- const food = menuItems.find(
-  (item) =>
-    item.id === foodId ||
-    item.name.toLowerCase().replace(/\s+/g, "-") ===
-      foodId.toLowerCase()
-);
+  const food = menuItems.find(
+    (item) =>
+      item.id === foodId ||
+      item.name.toLowerCase().replace(/\s+/g, "-") ===
+        foodId.toLowerCase()
+  );
 
   if (!food) {
     return (
@@ -56,5 +57,13 @@ export default function FoodDetailPage() {
         <h2>{food.price} ETB</h2>
       </section>
     </main>
+  );
+}
+
+export default function FoodDetailPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-center">Loading food details...</div>}>
+      <FoodDetailContent />
+    </Suspense>
   );
 }
