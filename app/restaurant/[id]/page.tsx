@@ -2,12 +2,13 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense } from "react";
 import { useParams } from "next/navigation";
 import { restaurants } from "../../../data/restaurants";
 import { menuItems } from "../../../data/menu";
 import { useCart } from "../../cart/CartContext";
 
-export default function RestaurantDetailPage() {
+function RestaurantDetailContent() {
   const params = useParams<{ id: string }>();
 
   const restaurant = restaurants.find(
@@ -130,5 +131,13 @@ export default function RestaurantDetailPage() {
         )}
       </section>
     </main>
+  );
+}
+
+export default function RestaurantDetailPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-center">Loading restaurant details...</div>}>
+      <RestaurantDetailContent />
+    </Suspense>
   );
 }
