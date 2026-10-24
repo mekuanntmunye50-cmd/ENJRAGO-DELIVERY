@@ -1,4 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 const accountCards = [
   { title: "Order History", action: "View details" },
@@ -11,6 +16,63 @@ const supportCards = [
 ];
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const [userName, setUserName] = useState("Guest User");
+  const [email, setEmail] = useState("guest@example.com");
+  const [signingOut, setSigningOut] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadProfile() {
+      try {
+        const supabase = createClient();
+        const { data, error } = await supabase.auth.getUser();
+
+        if (!isMounted) return;
+
+        if (error || !data.user) {
+          router.replace("/login");
+          return;
+        }
+
+        const fullName = data.user.user_metadata?.full_name || data.user.email?.split("@", 1)[0] || "Customer";
+        setUserName(fullName);
+        setEmail(data.user.email || "No email provided");
+      } catch {
+        if (isMounted) {
+          router.replace("/login");
+        }
+      }
+    }
+
+    loadProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [router]);
+
+  async function handleSignOut() {
+    setSigningOut(true);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        throw error;
+      }
+
+      router.replace("/login");
+      router.refresh();
+    } catch (error) {
+      console.error("Sign out failed:", error);
+    } finally {
+      setSigningOut(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f4f3ef] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
@@ -47,7 +109,7 @@ export default function ProfilePage() {
                   <span className="mb-2 block text-base text-[#2e392f]">Name</span>
                   <div className="rounded-xl border border-[#d7d8d1] bg-white px-4 py-3 text-[#3d4d49] shadow-sm">
                     <input
-                      value="John Doe"
+                      value={userName}
                       readOnly
                       className="w-full border-0 bg-transparent text-base text-[#3d4d49] outline-none"
                     />
@@ -58,7 +120,7 @@ export default function ProfilePage() {
                   <span className="mb-2 block text-base text-[#2e392f]">Email address</span>
                   <div className="rounded-xl border border-[#d7d8d1] bg-white px-4 py-3 text-[#3d4d49] shadow-sm">
                     <input
-                      value="john.doe@example.com"
+                      value={email}
                       readOnly
                       className="w-full border-0 bg-transparent text-base text-[#3d4d49] outline-none"
                     />
@@ -140,9 +202,14 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <button className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#d7d8d1] bg-white px-5 py-4 text-lg font-semibold text-[#173d34] shadow-sm transition hover:border-[#a4c760] hover:bg-[#f9fbf7]">
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={signingOut}
+                className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#d7d8d1] bg-white px-5 py-4 text-lg font-semibold text-[#173d34] shadow-sm transition hover:border-[#a4c760] hover:bg-[#f9fbf7] disabled:cursor-not-allowed disabled:opacity-70"
+              >
                 <span className="text-xl">◔</span>
-                Sign out
+                {signingOut ? "Signing out..." : "Sign out"}
               </button>
             </aside>
           </div>

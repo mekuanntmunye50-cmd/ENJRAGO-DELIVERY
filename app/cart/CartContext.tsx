@@ -76,6 +76,8 @@ export function CartProvider({
         const parsed: unknown = JSON.parse(savedCart);
 
         if (Array.isArray(parsed)) {
+          // Restore the persisted external state after client hydration.
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setItems(parsed.filter(isValidCartItem));
         } else {
           localStorage.removeItem(CART_STORAGE_KEY);

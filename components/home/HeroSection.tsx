@@ -36,21 +36,29 @@ export default function HeroSection() {
             <span>✓ Freshly prepared</span>
             <span>✓ Easy ordering</span>
           </div>
+
+          <div className="hero-proof">
+            <span className="hero-proof-mark">★</span>
+            <div>
+              <strong>Made for your cravings</strong>
+              <p>Discover great food from Addis Ababa kitchens.</p>
+            </div>
+          </div>
         </div>
 
         <div className="hero-visual">
           <div className="hero-image-frame">
             <img
-              src="https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1000&q=85"
-              alt="A colorful platter of freshly prepared food"
+              src="https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=1200&q=90"
+              alt="A colorful platter of freshly prepared food with vegetables and injera"
             />
           </div>
 
           <div className="hero-note">
-            <span className="hero-note-icon">✦</span>
+            <span className="hero-note-icon">🍽</span>
             <div>
-              <strong>Made with care</strong>
-              <p>Flavor in every bite</p>
+              <strong>Freshly prepared</strong>
+              <p>Good food, delivered with care</p>
             </div>
           </div>
 

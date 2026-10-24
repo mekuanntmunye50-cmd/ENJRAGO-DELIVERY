@@ -1,17 +1,20 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
 
@@ -27,14 +30,29 @@ export default function LoginPage() {
 
     setLoading(true);
 
-    // Frontend demonstration only.
-    // Connect this form to your authentication API later.
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const supabase = createClient();
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (signInError) {
+        setError(signInError.message);
+        return;
+      }
+
+      router.replace("/profile");
+      router.refresh();
+    } catch (caughtError) {
       setError(
-        "Login is not connected to the backend yet. Please try again after authentication is implemented."
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Could not sign in right now. Please try again."
       );
-    }, 500);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -67,7 +85,7 @@ export default function LoginPage() {
 
           <div className="visual-footer">
             <span className="footer-dot" />
-            Bringing Ethiopia's flavors closer to you.
+            Bringing Ethiopia&apos;s flavors closer to you.
           </div>
         </div>
       </section>

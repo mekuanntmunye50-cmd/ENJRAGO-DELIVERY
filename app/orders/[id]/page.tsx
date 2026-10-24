@@ -1,13 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+
+type OrderItem = {
+  id: string;
+  food_name: string;
+  unit_price: number;
+  quantity: number;
+};
+
+type Order = {
+  id: string;
+  status: string;
+  full_name: string;
+  phone: string;
+  city: string;
+  area: string;
+  street_address: string;
+  instructions: string;
+  subtotal: number;
+  delivery_fee: number;
+  total: number;
+  created_at: string;
+  order_items: OrderItem[];
+};
 
 const statusSteps = [
-  { title: "Order placed", active: true },
-  { title: "Food is cooking", active: true },
-  { title: "On the way", active: true },
-  { title: "Delivered", active: false },
+  { value: "placed", label: "Order placed" },
+  { value: "confirmed", label: "Confirmed" },
+  { value: "preparing", label: "Preparing" },
+  { value: "ready", label: "Ready" },
+  { value: "out_for_delivery", label: "On the way" },
+  { value: "delivered", label: "Delivered" },
 ];
 
 export default function OrderDetailsPage() {
@@ -19,157 +46,180 @@ export default function OrderDetailsPage() {
 }
 
 function OrderDetailsContent() {
+  const { id } = useParams<{ id: string }>();
+  const [order, setOrder] = useState<Order | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadOrder() {
+      try {
+        const supabase = createClient();
+        const { data, error: queryError } = await supabase
+          .from("orders")
+          .select(
+            "id, status, full_name, phone, city, area, street_address, instructions, subtotal, delivery_fee, total, created_at, order_items(id, food_name, unit_price, quantity)"
+          )
+          .eq("id", id)
+          .single();
+
+        if (queryError) {
+          throw queryError;
+        }
+
+        if (isMounted) {
+          setOrder(data);
+        }
+      } catch (caughtError) {
+        if (isMounted) {
+          setError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Could not load this order."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadOrder();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  const money = (amount: number) =>
+    `${amount.toLocaleString("en-ET", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })} ETB`;
+
+  if (loading) {
+    return <main className="p-10 text-center text-gray-600">Loading order...</main>;
+  }
+
+  if (error || !order) {
+    return (
+      <main className="mx-auto max-w-2xl px-5 py-20 text-center">
+        <h1 className="text-3xl font-bold text-gray-900">Order unavailable</h1>
+        <p className="mt-3 text-gray-600">
+          {error || "This order could not be found or you do not have access to it."}
+        </p>
+        <Link
+          href="/"
+          className="mt-7 inline-block rounded-xl bg-[#2f7d46] px-6 py-3 font-semibold text-white"
+        >
+          Back to home
+        </Link>
+      </main>
+    );
+  }
+
+  const isCancelled = order.status === "cancelled";
+  const activeStep = statusSteps.findIndex((step) => step.value === order.status);
+  const currentStatus = isCancelled
+    ? "Order cancelled"
+    : statusSteps.find((step) => step.value === order.status)?.label ??
+      "Order received";
+
   return (
-    <main className="min-h-screen bg-[#eef0ee] px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto grid max-w-5xl gap-6 lg:grid-cols-2">
-        <section className="rounded-[26px] border border-[#dfe4df] bg-[#f7f7f6] p-5 shadow-[0_15px_35px_rgba(31,52,45,0.05)]">
-          <div className="flex items-center justify-between pb-4">
-            <button className="text-2xl text-[#1a2723]">←</button>
-            <p className="text-lg font-medium text-[#293632]">Contact Support</p>
-            <span className="h-6 w-6" />
+    <main className="min-h-screen bg-[#eef0ee] px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-3xl">
+        <Link href="/" className="text-sm font-semibold text-[#1f5a4e] hover:underline">
+          ← Back to home
+        </Link>
+
+        <section className="mt-5 rounded-[26px] border border-[#dfe4df] bg-white p-5 shadow-sm sm:p-8">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wider text-[#58806d]">
+                Order #{order.id.slice(0, 8)}
+              </p>
+              <h1 className="mt-2 text-3xl font-black tracking-tight text-[#1d2a27]">
+                {currentStatus}
+              </h1>
+              <p className="mt-2 text-sm text-[#5b6d68]">
+                Placed {new Date(order.created_at).toLocaleString()}
+              </p>
+            </div>
+            <span className="rounded-full bg-[#edf5e9] px-4 py-2 text-sm font-bold capitalize text-[#2f7d46]">
+              {order.status.replaceAll("_", " ")}
+            </span>
           </div>
 
-          <div className="mt-4">
-            <h1 className="text-[2.1rem] font-black tracking-[-0.06em] text-[#1d2a27]">Preparing your order...</h1>
-            <p className="mt-2 text-base text-[#4f605b]">Arriving at 10:25 PM</p>
-          </div>
+          {!isCancelled && (
+            <ol className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {statusSteps.map((step, index) => {
+                const complete = activeStep >= index;
+                return (
+                  <li
+                    key={step.value}
+                    className={`rounded-xl border px-3 py-3 text-sm font-semibold ${
+                      complete
+                        ? "border-[#b9d8c2] bg-[#edf5e9] text-[#285c3a]"
+                        : "border-gray-200 bg-gray-50 text-gray-500"
+                    }`}
+                  >
+                    <span className="mr-2">{complete ? "✓" : "○"}</span>
+                    {step.label}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
 
-          <div className="mt-8">
-            <div className="flex items-center justify-between gap-3">
-              {statusSteps.map((step, index) => (
-                <div key={step.title} className="flex flex-1 items-center">
-                  <div className="flex flex-col items-center gap-3">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-full border-2 ${step.active ? "border-[#2fa16d] bg-[#2fa16d] text-white" : "border-[#d9e0dc] bg-white text-[#7a8582]"}`}>
-                      {index === 0 ? "🛒" : index === 1 ? "🍲" : index === 2 ? "🛵" : "✓"}
-                    </div>
-                    {index < statusSteps.length - 1 && (
-                      <div className={`h-1.5 w-16 rounded-full ${step.active ? "bg-[#2fa16d]" : "bg-[#dfe4df]"}`} />
-                    )}
-                  </div>
+          <div className="mt-8 grid gap-6 border-t border-gray-100 pt-6 sm:grid-cols-2">
+            <div>
+              <h2 className="text-lg font-bold text-[#1d2a27]">Delivery details</h2>
+              <p className="mt-3 font-semibold text-gray-800">{order.full_name}</p>
+              <p className="text-sm text-gray-600">{order.phone}</p>
+              <p className="mt-2 text-sm text-gray-600">
+                {order.street_address}, {order.area}, {order.city}
+              </p>
+              {order.instructions && (
+                <p className="mt-2 text-sm text-gray-500">
+                  Note: {order.instructions}
+                </p>
+              )}
+              <p className="mt-3 text-sm font-medium text-gray-600">
+                Payment: Cash on delivery
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-lg font-bold text-[#1d2a27]">Order summary</h2>
+              <ul className="mt-3 space-y-3">
+                {order.order_items.map((item) => (
+                  <li key={item.id} className="flex justify-between gap-4 text-sm">
+                    <span className="text-gray-700">
+                      {item.quantity} × {item.food_name}
+                    </span>
+                    <span className="shrink-0 font-semibold text-gray-900">
+                      {money(item.unit_price * item.quantity)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4 space-y-2 border-t border-gray-100 pt-4 text-sm">
+                <div className="flex justify-between text-gray-600">
+                  <span>Subtotal</span>
+                  <span>{money(order.subtotal)}</span>
                 </div>
-              ))}
-            </div>
-
-            <div className="mt-6 flex justify-center">
-              <div className="flex h-36 w-36 items-center justify-center rounded-[32px] bg-[#f0f4f2] text-6xl shadow-inner">🍲</div>
-            </div>
-          </div>
-
-          <div className="mt-8 rounded-2xl border border-[#dfe4df] bg-white p-4 shadow-sm">
-            <h2 className="mb-5 text-2xl font-black tracking-[-0.05em] text-[#1d2a27]">Delivery details</h2>
-            <div className="space-y-4 text-base text-[#2e3d39]">
-              <div className="flex items-center gap-3 rounded-xl bg-[#f5f7f6] px-3 py-3">
-                <span className="text-[#2ca36d]">📍</span>
-                <div>
-                  <p className="font-semibold">Address</p>
-                  <p className="text-[#4c5b57]">200 w 45th St, New York, NY 19990, UK</p>
+                <div className="flex justify-between text-gray-600">
+                  <span>Delivery fee</span>
+                  <span>{money(order.delivery_fee)}</span>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-3 rounded-xl bg-[#f5f7f6] px-3 py-3">
-                <span className="text-[#2ca36d]">🚚</span>
-                <div className="flex w-full items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold">Type</p>
-                    <p className="text-[#4c5b57]">Meet at door</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 rounded-xl bg-[#f5f7f6] px-3 py-3">
-                <span className="text-[#2ca36d]">🧭</span>
-                <div>
-                  <p className="font-semibold">Service</p>
-                  <p className="text-[#4c5b57]">Standard</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 rounded-2xl border border-[#dfe4df] bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[#4d5f5d]">Order summary</p>
-                <p className="mt-2 text-xl font-bold text-[#1d2a27]">Regula Brewed Coffee</p>
-              </div>
-              <p className="text-xl font-black text-[#1a2723]">$5.69</p>
-            </div>
-            <div className="mt-4 flex justify-center">
-              <button className="rounded-xl border border-[#dfe4df] bg-[#f7f7f6] px-5 py-2 text-sm font-semibold text-[#1a2723]">
-                View details
-              </button>
-            </div>
-            <div className="mt-6 flex items-center justify-between border-t border-[#edf0ee] pt-4 text-lg font-semibold text-[#1d2a27]">
-              <span>Total paid</span>
-              <span>$24.80</span>
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-[26px] border border-[#dfe4df] bg-[#f7f7f6] p-5 shadow-[0_15px_35px_rgba(31,52,45,0.05)]">
-          <div className="flex items-center justify-between pb-4">
-            <button className="text-2xl text-[#1a2723]">←</button>
-            <p className="text-lg font-medium text-[#293632]">Contact Support</p>
-            <span className="h-6 w-6" />
-          </div>
-
-          <div className="mt-4">
-            <h1 className="text-[2.1rem] font-black tracking-[-0.06em] text-[#1d2a27]">Your order has been picked</h1>
-            <p className="mt-2 text-base text-[#4f605b]">Arriving at 10:25 PM</p>
-          </div>
-
-          <div className="mt-8 flex items-center justify-between gap-3 rounded-full bg-white p-2 shadow-sm">
-            {statusSteps.map((step, index) => (
-              <div key={step.title} className="flex items-center gap-2">
-                <div className={`flex h-8 w-8 items-center justify-center rounded-full border ${step.active ? "border-[#2fa16d] bg-[#2fa16d] text-white" : "border-[#d9e0dc] bg-[#f5f7f5] text-[#7a8582]"}`}>
-                  {index === 0 ? "🍽" : index === 1 ? "👨‍🍳" : index === 2 ? "🛵" : "✓"}
-                </div>
-                {index < statusSteps.length - 1 && <div className={`h-1 w-10 rounded-full ${step.active ? "bg-[#2fa16d]" : "bg-[#dfe4df]"}`} />}
-              </div>
-            ))}
-          </div>
-
-          <div className="relative mt-8 overflow-hidden rounded-[24px] border border-[#dde3de] bg-[#edf0ee] p-2 shadow-inner">
-            <div className="h-[260px] rounded-[18px] bg-[radial-gradient(circle_at_20%_20%,rgba(103,125,112,0.08),transparent_28%),linear-gradient(135deg,#f3f3f2,#e6e9e7)]">
-              <div className="absolute inset-0 opacity-40">
-                <div className="h-full w-full bg-[linear-gradient(rgba(255,255,255,0.25)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.25)_1px,transparent_1px)] bg-[size:26px_26px]" />
-              </div>
-              <div className="absolute left-[12%] top-[18%] h-5 w-5 rounded-full bg-[#5f8a7a] shadow-[0_0_0_8px_rgba(95,138,122,0.12)]" />
-              <div className="absolute right-[22%] top-[32%] h-5 w-5 rounded-full bg-[#b77ad8] shadow-[0_0_0_8px_rgba(183,122,216,0.14)]" />
-              <div className="absolute left-[38%] top-[62%] h-5 w-5 rounded-full bg-[#e6b941] shadow-[0_0_0_8px_rgba(230,185,65,0.14)]" />
-              <div className="absolute left-[48%] top-[58%] h-5 w-5 rounded-full bg-[#b77ad8] shadow-[0_0_0_8px_rgba(183,122,216,0.14)]" />
-              <div className="absolute left-[58%] top-[45%] h-5 w-5 rounded-full bg-[#b77ad8] shadow-[0_0_0_8px_rgba(183,122,216,0.14)]" />
-              <div className="absolute left-[46%] top-[52%] h-16 w-16 rounded-full bg-[#2fa16d] text-white shadow-lg">🛵</div>
-              <div className="absolute left-[38%] top-[52%] h-2 w-32 rounded-full bg-[#b77ad8]" />
-            </div>
-          </div>
-
-          <div className="mt-6 flex items-center justify-between rounded-2xl bg-[#1f5a4e] px-4 py-3 text-white shadow-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🕒</span>
-              <span className="text-lg font-bold">Arriving in 4 mins</span>
-            </div>
-            <span className="rounded-full bg-white/10 px-3 py-1 text-sm font-semibold">10:25 PM</span>
-          </div>
-
-          <div className="mt-6 rounded-2xl border border-[#dfe4df] bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#f2d2b4] text-lg">N</div>
-                <div>
-                  <p className="text-lg font-bold text-[#1d2a27]">Noah Anna</p>
-                  <p className="text-sm text-[#5b6d68]">Joined Jul 2023</p>
+                <div className="flex justify-between pt-2 text-lg font-black text-gray-900">
+                  <span>Total</span>
+                  <span>{money(order.total)}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-1 rounded-full bg-[#f6f5ee] px-2 py-1 text-sm font-semibold text-[#e4a932]">
-                <span>★</span> 4.3
-              </div>
-            </div>
-            <p className="mt-3 text-sm text-[#4d5f5d]">Silver Toyota Prius Hybrid</p>
-
-            <div className="mt-4 flex items-center gap-3">
-              <button className="flex-1 rounded-full border border-[#dfe4df] bg-[#f7f7f6] px-4 py-3 text-sm font-semibold text-[#1d2a27]">Send Message (optional)</button>
-              <button className="rounded-full border border-[#dfe4df] bg-[#f7f7f6] px-4 py-3 text-sm font-semibold text-[#1d2a27]">✦ Tip</button>
             </div>
           </div>
         </section>

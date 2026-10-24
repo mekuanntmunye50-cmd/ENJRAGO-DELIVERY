@@ -20,6 +20,15 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Supabase setup
+
+1. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` to `frontend/.env`. Get both values from **Supabase Dashboard → Project Settings → API**. The URL should look like `https://<your-project-ref>.supabase.co`; do not leave the example values from `.env.example`.
+2. In the Supabase SQL Editor, run [`supabase/schema.sql`](./supabase/schema.sql). It creates customer profiles, the menu catalog, orders, order items, row-level security policies, and the atomic order-creation function.
+3. Enable email/password authentication in Supabase. For OAuth, enable the provider and add your local and production callback URLs (`/auth/callback`) to the Supabase redirect URL allow list.
+4. Start the app with `npm run dev`, create an account, and confirm the email if confirmation is enabled. Checkout requires a signed-in user.
+
+Checkout calls the database function to verify available menu items and calculate prices in the database before saving the order. The menu catalog is seeded from the current demo menu; update the seed rows in `supabase/schema.sql` whenever demo menu IDs, restaurant IDs, names, or prices change. Orders and their line items are created together, and customers can only read their own orders.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

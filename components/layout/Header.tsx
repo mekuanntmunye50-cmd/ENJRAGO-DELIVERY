@@ -3,9 +3,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useCart } from "@/app/cart/CartContext";
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { cartCount } = useCart();
 
   return (
     <header className="site-header">
@@ -54,7 +56,10 @@ export default function Header() {
             className="nav-cart"
             onClick={() => setMenuOpen(false)}
           >
-            🛒 Cart
+            <span aria-hidden="true">🛒</span> Cart
+            <span className="nav-cart-count" aria-label={`${cartCount} items`}>
+              {cartCount}
+            </span>
           </Link>
         </nav>
       </div>

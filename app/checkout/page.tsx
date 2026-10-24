@@ -3,7 +3,9 @@
 
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCart } from "../cart/CartContext";
+import { createClient } from "@/lib/supabase/client";
 
 type CheckoutForm = {
   fullName: string;
@@ -26,10 +28,12 @@ const INITIAL_FORM: CheckoutForm = {
 const DELIVERY_FEE = 80;
 
 export default function CheckoutPage() {
+  const router = useRouter();
   const {
     items,
     subtotal,
     cartCount,
+    clearCart,
   } = useCart();
 
   const [form, setForm] = useState<CheckoutForm>(INITIAL_FORM);
@@ -37,7 +41,8 @@ export default function CheckoutPage() {
     Partial<Record<keyof CheckoutForm, string>>
   >({});
   const [paymentMethod, setPaymentMethod] = useState("cod");
-  const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const updateField = (
     field: keyof CheckoutForm,
@@ -45,7 +50,7 @@ export default function CheckoutPage() {
   ) => {
     setForm((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
-    setSubmitted(false);
+    setSubmitError("");
   };
 
   const validateForm = () => {
@@ -82,15 +87,15 @@ export default function CheckoutPage() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setSubmitError("");
 
     if (items.length === 0) {
       return;
     }
 
     if (!validateForm()) {
-      setSubmitted(false);
       return;
     }
 
@@ -98,9 +103,56 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Frontend demonstration only.
-    // The backend will create and save the real order later.
-    setSubmitted(true);
+    setIsSubmitting(true);
+
+    try {
+      const supabase = createClient();
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+
+      if (authError) {
+        throw authError;
+      }
+
+      if (!authData.user) {
+        setSubmitError("Please sign in before placing your order.");
+        return;
+      }
+
+      const { data: orderId, error: orderError } = await supabase.rpc(
+        "create_customer_order",
+        {
+          p_full_name: form.fullName.trim(),
+          p_phone: form.phone.trim(),
+          p_city: form.city.trim(),
+          p_area: form.area.trim(),
+          p_street_address: form.streetAddress.trim(),
+          p_instructions: form.instructions.trim(),
+          p_items: items.map(({ id, quantity }) => ({
+            food_id: id,
+            quantity,
+          })),
+        }
+      );
+
+      if (orderError) {
+        throw orderError;
+      }
+
+      if (typeof orderId !== "string") {
+        throw new Error("The order was created without a valid order ID.");
+      }
+
+      clearCart();
+      router.push(`/orders/${orderId}`);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Could not place your order. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const money = (amount: number) =>
@@ -121,7 +173,7 @@ export default function CheckoutPage() {
         </p>
         <Link
           href="/food"
-          className="mt-7 inline-block rounded-xl bg-orange-500 px-6 py-3 font-semibold text-white transition hover:bg-orange-600"
+          className="mt-7 inline-block rounded-xl bg-[#2f7d46] px-6 py-3 font-semibold text-white transition hover:bg-[#205b35]"
         >
           Explore food
         </Link>
@@ -130,12 +182,12 @@ export default function CheckoutPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 px-4 py-10 sm:px-6 lg:px-8">
+    <main className="checkout-page min-h-screen bg-gray-50 px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="mb-8">
           <Link
             href="/cart"
-            className="text-sm font-medium text-orange-600 hover:underline"
+            className="text-sm font-medium text-[#2f7d46] hover:underline"
           >
             ← Back to cart
           </Link>
@@ -148,22 +200,6 @@ export default function CheckoutPage() {
             Almost there! Confirm your delivery details.
           </p>
         </div>
-
-        {submitted && (
-          <section
-            role="status"
-            className="mb-6 rounded-xl border border-green-200 bg-green-50 p-5 text-green-900"
-          >
-            <h2 className="font-bold">
-              Your checkout details are valid!
-            </h2>
-            <p className="mt-1 text-sm">
-              Cash on delivery is selected. This is a frontend
-              preview only; your order has not been saved or sent
-              to a restaurant yet.
-            </p>
-          </section>
-        )}
 
         <form
           onSubmit={handleSubmit}
@@ -200,7 +236,7 @@ export default function CheckoutPage() {
                       errors.fullName ? "fullName-error" : undefined
                     }
                     placeholder="Enter your full name"
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-[#2f7d46] focus:ring-2 focus:ring-[#e3efdc]"
                   />
                   {errors.fullName && (
                     <p id="fullName-error" className="mt-1 text-sm text-red-600">
@@ -231,7 +267,7 @@ export default function CheckoutPage() {
                       errors.phone ? "phone-error" : undefined
                     }
                     placeholder="e.g. 0912345678 or +251912345678"
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-[#2f7d46] focus:ring-2 focus:ring-[#e3efdc]"
                   />
                   {errors.phone && (
                     <p id="phone-error" className="mt-1 text-sm text-red-600">
@@ -268,7 +304,7 @@ export default function CheckoutPage() {
                     }
                     aria-invalid={Boolean(errors.city)}
                     placeholder="e.g. Addis Ababa"
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-[#2f7d46] focus:ring-2 focus:ring-[#e3efdc]"
                   />
                   {errors.city && (
                     <p className="mt-1 text-sm text-red-600">
@@ -294,7 +330,7 @@ export default function CheckoutPage() {
                     }
                     aria-invalid={Boolean(errors.area)}
                     placeholder="e.g. Bole"
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-[#2f7d46] focus:ring-2 focus:ring-[#e3efdc]"
                   />
                   {errors.area && (
                     <p className="mt-1 text-sm text-red-600">
@@ -321,7 +357,7 @@ export default function CheckoutPage() {
                     }
                     aria-invalid={Boolean(errors.streetAddress)}
                     placeholder="Building name, house number, nearby landmark..."
-                    className="w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                    className="w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-[#2f7d46] focus:ring-2 focus:ring-[#e3efdc]"
                   />
                   {errors.streetAddress && (
                     <p className="mt-1 text-sm text-red-600">
@@ -346,7 +382,7 @@ export default function CheckoutPage() {
                       updateField("instructions", event.target.value)
                     }
                     placeholder="Any directions that can help the rider?"
-                    className="w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                    className="w-full resize-y rounded-xl border border-gray-300 px-4 py-3 text-gray-900 outline-none focus:border-[#2f7d46] focus:ring-2 focus:ring-[#e3efdc]"
                   />
                 </div>
               </div>
@@ -357,7 +393,7 @@ export default function CheckoutPage() {
                 3. Payment method
               </h2>
 
-              <label className="mt-5 flex cursor-pointer items-start gap-4 rounded-xl border-2 border-orange-500 bg-orange-50 p-4">
+              <label className="mt-5 flex cursor-pointer items-start gap-4 rounded-xl border-2 border-[#2f7d46] bg-[#edf5e9] p-4">
                 <input
                   type="radio"
                   name="paymentMethod"
@@ -366,7 +402,7 @@ export default function CheckoutPage() {
                   onChange={(event) =>
                     setPaymentMethod(event.target.value)
                   }
-                  className="mt-1 accent-orange-500"
+                  className="mt-1 accent-[#2f7d46]"
                 />
                 <span>
                   <span className="block font-bold text-gray-900">
@@ -440,14 +476,25 @@ export default function CheckoutPage() {
 
             <button
               type="submit"
-              className="mt-7 w-full rounded-xl bg-orange-500 px-5 py-4 font-bold text-white shadow-sm transition hover:bg-orange-600 focus:outline-none focus:ring-4 focus:ring-orange-200"
+              disabled={isSubmitting}
+              className="mt-7 w-full rounded-xl bg-[#2f7d46] px-5 py-4 font-bold text-white shadow-sm transition hover:bg-[#205b35] focus:outline-none focus:ring-4 focus:ring-[#d8ead0] disabled:cursor-wait disabled:opacity-70"
             >
-              Confirm checkout
+              {isSubmitting ? "Placing order..." : "Place order"}
             </button>
 
+            {submitError && (
+              <p className="mt-4 text-sm leading-5 text-red-700" role="alert">
+                {submitError}{" "}
+                {submitError === "Please sign in before placing your order." && (
+                  <Link href="/login" className="font-semibold underline">
+                    Sign in
+                  </Link>
+                )}
+              </p>
+            )}
+
             <p className="mt-4 text-center text-xs leading-5 text-gray-500">
-              Your order details will be sent to the server once
-              backend order creation is implemented.
+              Your order total is calculated from the current menu prices.
             </p>
           </aside>
         </form>

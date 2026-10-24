@@ -1,11 +1,74 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import OAuthButtons from "@/components/auth/OAuthButtons";
+import { createClient } from "@/lib/supabase/client";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+
+    if (password !== confirmPassword) {
+      setError("Your passwords do not match.");
+      return;
+    }
+
+    if (!acceptedTerms) {
+      setError("Please agree to the Terms of Service and Privacy Policy.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const supabase = createClient();
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { full_name: fullName.trim() },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+
+      if (data.session) {
+        router.replace("/profile");
+        router.refresh();
+        return;
+      }
+
+      setMessage("Check your email to confirm your account, then sign in.");
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Account registration failed. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[#dfe8d8] px-4 py-6 sm:px-8 lg:px-12">
@@ -96,7 +159,7 @@ export default function RegisterPage() {
               Join NutriBite and start your healthy journey today!
             </p>
 
-            <div className="mt-8 space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-4">
               <label className="block">
                 <span className="sr-only">Full Name</span>
                 <div className="flex items-center gap-3 rounded-xl border border-[#d7d6d1] bg-white px-4 py-3 shadow-sm">
@@ -104,6 +167,8 @@ export default function RegisterPage() {
                   <input
                     type="text"
                     placeholder="Full Name"
+                    value={fullName}
+                    onChange={(event) => setFullName(event.target.value)}
                     className="w-full border-0 bg-transparent text-base text-[#1b2f2b] outline-none placeholder:text-[#7d8783]"
                   />
                 </div>
@@ -116,6 +181,8 @@ export default function RegisterPage() {
                   <input
                     type="email"
                     placeholder="Email Address"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
                     className="w-full border-0 bg-transparent text-base text-[#1b2f2b] outline-none placeholder:text-[#7d8783]"
                   />
                 </div>
@@ -128,6 +195,8 @@ export default function RegisterPage() {
                   <input
                     type={showPassword ? "text" : "password"}
                     placeholder="Password"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
                     className="w-full border-0 bg-transparent text-base text-[#1b2f2b] outline-none placeholder:text-[#7d8783]"
                   />
                   <button
@@ -149,6 +218,8 @@ export default function RegisterPage() {
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Confirm Password"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
                     className="w-full border-0 bg-transparent text-base text-[#1b2f2b] outline-none placeholder:text-[#7d8783]"
                   />
                   <button
@@ -162,15 +233,36 @@ export default function RegisterPage() {
                 </div>
               </label>
 
+              {error && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700" role="alert">
+                  {error}
+                </div>
+              )}
+
+              {message && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                  {message}
+                </div>
+              )}
+
               <label className="flex items-center gap-3 pt-2 text-sm text-[#374b46]">
-                <input type="checkbox" className="h-4 w-4 rounded border-[#9ca7a3] text-[#2f7d5c] accent-[#2f7d5c]" />
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(event) => setAcceptedTerms(event.target.checked)}
+                  className="h-4 w-4 rounded border-[#9ca7a3] text-[#2f7d5c] accent-[#2f7d5c]"
+                />
                 <span>
                   I agree to the <Link href="/terms" className="font-semibold text-[#1c6c5d] underline">Terms of Service</Link> and <Link href="/privacy" className="font-semibold text-[#1c6c5d] underline">Privacy Policy</Link>
                 </span>
               </label>
 
-              <button type="button" className="mt-4 w-full rounded-xl bg-[#3a8c65] px-4 py-4 text-lg font-black uppercase tracking-[0.04em] text-white shadow-[0_8px_18px_rgba(58,140,101,0.35)] transition hover:bg-[#2f7d5c]">
-                Sign Up
+              <button
+                type="submit"
+                disabled={loading}
+                className="mt-4 w-full rounded-xl bg-[#3a8c65] px-4 py-4 text-lg font-black uppercase tracking-[0.04em] text-white shadow-[0_8px_18px_rgba(58,140,101,0.35)] transition hover:bg-[#2f7d5c] disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {loading ? "Signing Up..." : "Sign Up"}
               </button>
 
               <div className="mt-6 flex items-center justify-center gap-4 text-[#6a7874]">
@@ -179,16 +271,8 @@ export default function RegisterPage() {
                 <span className="h-px flex-1 bg-[#d5d4d1]" />
               </div>
 
-              <button type="button" className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#d7d6d1] bg-white px-4 py-3 text-base font-semibold text-[#2a302e] shadow-sm transition hover:border-[#9eb7a9]">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#f4f8f5] text-sm font-bold text-[#3b7b68]">G</span>
-                Continue with Google
-              </button>
-
-              <button type="button" className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#d7d6d1] bg-white px-4 py-3 text-base font-semibold text-[#2a302e] shadow-sm transition hover:border-[#9eb7a9]">
-                <span className="text-xl"></span>
-                Continue with Apple
-              </button>
-            </div>
+              <OAuthButtons />
+            </form>
 
             <p className="mt-8 text-center text-sm text-[#475d58]">
               Already have an account? <Link href="/login" className="font-semibold text-[#1c6c5d]">Sign In</Link>
