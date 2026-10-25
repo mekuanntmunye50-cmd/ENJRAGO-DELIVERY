@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-const accountCards = [
-  { title: "Order History", action: "View details" },
+const accountCards: { title: string; action: string; href?: string }[] = [
+  { title: "Order History", action: "View details", href: "/orders" },
   { title: "Refer A Friend", action: "View details" },
 ];
 
@@ -20,6 +20,7 @@ export default function ProfilePage() {
   const [userName, setUserName] = useState("Guest User");
   const [email, setEmail] = useState("guest@example.com");
   const [signingOut, setSigningOut] = useState(false);
+  const [profileError, setProfileError] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -31,7 +32,11 @@ export default function ProfilePage() {
 
         if (!isMounted) return;
 
-        if (error || !data.user) {
+        if (error) {
+          throw error;
+        }
+
+        if (!data.user) {
           router.replace("/login");
           return;
         }
@@ -39,9 +44,13 @@ export default function ProfilePage() {
         const fullName = data.user.user_metadata?.full_name || data.user.email?.split("@", 1)[0] || "Customer";
         setUserName(fullName);
         setEmail(data.user.email || "No email provided");
-      } catch {
+      } catch (error) {
         if (isMounted) {
-          router.replace("/login");
+          setProfileError(
+            error instanceof Error
+              ? error.message
+              : "Could not load your account details."
+          );
         }
       }
     }
@@ -68,6 +77,11 @@ export default function ProfilePage() {
       router.refresh();
     } catch (error) {
       console.error("Sign out failed:", error);
+      setProfileError(
+        error instanceof Error
+          ? error.message
+          : "Could not sign out. Please try again."
+      );
     } finally {
       setSigningOut(false);
     }
@@ -93,6 +107,12 @@ export default function ProfilePage() {
           <h1 className="mb-8 text-center text-5xl font-black tracking-[-0.06em] text-[#1d2a27]">
             Account
           </h1>
+
+          {profileError && (
+            <p className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700" role="alert">
+              {profileError}
+            </p>
+          )}
 
           <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
             <section>
@@ -130,38 +150,29 @@ export default function ProfilePage() {
                 <label className="block">
                   <span className="mb-2 block text-base text-[#2e392f]">Mobile number</span>
                   <div className="rounded-xl border border-[#d7d8d1] bg-white px-4 py-3 text-[#3d4d49] shadow-sm">
-                    <input
-                      value="+251 9xx xxx xxx"
-                      readOnly
-                      className="w-full border-0 bg-transparent text-base text-[#3d4d49] outline-none"
-                    />
+                    <p className="text-base text-[#66736e]">
+                      Add your phone number when placing an order.
+                    </p>
                   </div>
                 </label>
 
-                <button className="w-full rounded-xl border border-[#d7d8d1] bg-white px-4 py-3 text-base font-semibold text-[#173d34] shadow-sm transition hover:border-[#a4c760] hover:text-[#0d3d2b]">
-                  Change your password
-                </button>
+                <p className="text-sm text-[#66736e]">
+                  To change your password, use the password reset option on the sign-in page.
+                </p>
               </div>
 
               <div className="mt-10">
                 <div className="mb-5 flex items-center justify-between">
                   <h2 className="text-3xl font-black tracking-[-0.05em] text-[#1f2d2b]">Payment Details</h2>
-                  <button className="flex items-center gap-2 rounded-xl bg-[#a4c760] px-4 py-2.5 text-sm font-semibold text-[#173d34] shadow-sm transition hover:bg-[#96be57]">
-                    <span>＋</span>
-                    Add card
-                  </button>
+                  <span className="rounded-lg bg-[#edf5e9] px-3 py-2 text-xs font-semibold text-[#38634a]">
+                    Not available yet
+                  </span>
                 </div>
 
                 <div className="rounded-xl border border-[#d7d8d1] bg-white p-5 shadow-sm">
-                  <p className="text-[#51625c]">Default credit card</p>
-                  <div className="mt-5 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-16 items-center justify-center rounded-lg bg-[#f3f4f5] text-lg font-black text-[#1d4cc7]">VISA</div>
-                    </div>
-                    <div className="text-right text-sm text-[#4d635d]">
-                      Expires 07/2027
-                    </div>
-                  </div>
+                  <p className="text-[#51625c]">
+                    Online card payments are not set up. Orders currently use cash on delivery.
+                  </p>
                 </div>
               </div>
             </section>
@@ -177,9 +188,15 @@ export default function ProfilePage() {
                         <span className="text-[#58715d]">🧾</span>
                         {card.title}
                       </span>
-                      <button className="rounded-lg border border-[#d7d8d1] bg-[#f8f9f7] px-3 py-1.5 text-sm text-[#1a3d36] transition hover:border-[#a4c760]">
-                        {card.action}
-                      </button>
+                      {card.href ? (
+                        <Link href={card.href} className="rounded-lg border border-[#d7d8d1] bg-[#f8f9f7] px-3 py-1.5 text-sm text-[#1a3d36] transition hover:border-[#a4c760]">
+                          {card.action}
+                        </Link>
+                      ) : (
+                        <button className="rounded-lg border border-[#d7d8d1] bg-[#f8f9f7] px-3 py-1.5 text-sm text-[#1a3d36] transition hover:border-[#a4c760]">
+                          {card.action}
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
