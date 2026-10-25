@@ -2,35 +2,70 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { menuItems } from "../../../data/menu";
+import type { MenuItem } from "../../../data/menu";
+import { apiRequest } from "@/lib/api";
 
 function FoodDetailContent() {
   const params = useParams<{ id: string }>();
   const foodId = params.id;
+  const [food, setFood] = useState<MenuItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
-  const food = menuItems.find(
-    (item) =>
-      item.id === foodId ||
-      item.name.toLowerCase().replace(/\s+/g, "-") ===
-        foodId.toLowerCase()
-  );
+  useEffect(() => {
+    let isMounted = true;
+
+    apiRequest<{ menuItems: MenuItem[] }>("/api/catalog")
+      .then(({ menuItems }) => {
+        if (isMounted) {
+          setFood(
+            menuItems.find(
+              (item) =>
+                item.id === foodId ||
+                item.name.toLowerCase().replace(/\s+/g, "-") ===
+                  foodId.toLowerCase()
+            ) ?? null
+          );
+        }
+      })
+      .catch((error: unknown) => {
+        if (isMounted) {
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Could not load this menu item."
+          );
+        }
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [foodId]);
+
+  if (loading) {
+    return <main className="p-6 text-center" role="status">Loading food details...</main>;
+  }
+
+  if (loadError) {
+    return (
+      <main className="restaurants-page">
+        <h1>Could not load menu item</h1>
+        <p role="alert">{loadError}</p>
+        <Link href="/restaurants">Browse restaurants</Link>
+      </main>
+    );
+  }
 
   if (!food) {
     return (
       <main className="restaurants-page">
         <h1>Food item not found</h1>
-
-        <p>
-          Requested food ID: {foodId}
-        </p>
-
-        <p>
-          Available food IDs:{" "}
-          {menuItems.map((item) => item.id).join(", ")}
-        </p>
-
         <Link href="/restaurants">
           Browse restaurants
         </Link>

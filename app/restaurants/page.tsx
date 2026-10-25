@@ -1,16 +1,49 @@
 
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { restaurants } from "../../data/restaurants";
+import type { Restaurant } from "../../data/restaurants";
+import { apiRequest } from "@/lib/api";
 
 type SortOption = "recommended" | "rating" | "fee" | "name";
 
 export default function RestaurantsPage() {
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState<SortOption>("recommended");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    apiRequest<{ restaurants: Restaurant[]; menuItems: unknown[] }>("/api/catalog")
+      .then(({ restaurants: loadedRestaurants }) => {
+        if (isMounted) {
+          setRestaurants(loadedRestaurants);
+        }
+      })
+      .catch((error: unknown) => {
+        if (isMounted) {
+          setLoadError(
+            error instanceof Error
+              ? error.message
+              : "Could not load restaurants."
+          );
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const categories = [
     "All",
@@ -51,7 +84,7 @@ export default function RestaurantsPage() {
       default:
         return results;
     }
-  }, [search, category, sort]);
+  }, [search, category, sort, restaurants]);
 
   return (
     <main className="restaurants-page">
@@ -103,10 +136,17 @@ export default function RestaurantsPage() {
       <section className="restaurant-results">
         <div className="results-heading">
           <h2>Restaurants near you</h2>
-          <span>{filteredRestaurants.length} found</span>
+          <span>{loading ? "Loading..." : `${filteredRestaurants.length} found`}</span>
         </div>
 
-        {filteredRestaurants.length === 0 ? (
+        {loadError ? (
+          <div className="empty-results" role="alert">
+            <h3>Could not load restaurants</h3>
+            <p>{loadError}</p>
+          </div>
+        ) : loading ? (
+          <p role="status">Loading restaurants...</p>
+        ) : filteredRestaurants.length === 0 ? (
           <div className="empty-results">
             <h3>No restaurants found</h3>
             <p>Try another search or choose a different category.</p>

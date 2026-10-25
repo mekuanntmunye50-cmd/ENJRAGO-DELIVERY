@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { useParams, useRouter } from "next/navigation";
+import { apiRequest } from "@/lib/api";
 
 type OrderItem = {
   id: string;
@@ -47,6 +47,7 @@ export default function OrderDetailsPage() {
 
 function OrderDetailsContent() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -56,24 +57,19 @@ function OrderDetailsContent() {
 
     async function loadOrder() {
       try {
-        const supabase = createClient();
-        const { data, error: queryError } = await supabase
-          .from("orders")
-          .select(
-            "id, status, full_name, phone, city, area, street_address, instructions, subtotal, delivery_fee, total, created_at, order_items(id, food_name, unit_price, quantity)"
-          )
-          .eq("id", id)
-          .single();
-
-        if (queryError) {
-          throw queryError;
-        }
+        const { order } = await apiRequest<{ order: Order }>(
+          `/api/orders/${encodeURIComponent(id)}`
+        );
 
         if (isMounted) {
-          setOrder(data);
+          setOrder(order);
         }
       } catch (caughtError) {
         if (isMounted) {
+          if (caughtError instanceof Error && caughtError.message === "Please sign in to view this order.") {
+            router.replace("/login");
+            return;
+          }
           setError(
             caughtError instanceof Error
               ? caughtError.message
@@ -92,7 +88,7 @@ function OrderDetailsContent() {
     return () => {
       isMounted = false;
     };
-  }, [id]);
+  }, [id, router]);
 
   const money = (amount: number) =>
     `${amount.toLocaleString("en-ET", {

@@ -4,7 +4,7 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { apiRequest } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,16 +31,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
+      await apiRequest("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email: email.trim(), password }),
       });
-
-      if (signInError) {
-        setError(signInError.message);
-        return;
-      }
 
       router.replace("/profile");
       router.refresh();
@@ -125,9 +119,7 @@ export default function LoginPage() {
             <div className="form-field">
               <div className="password-label">
                 <label htmlFor="password">Password</label>
-                <Link href="/forgot-password" className="forgot-link">
-                  Forgot password?
-                </Link>
+                <span className="forgot-link">Password reset unavailable</span>
               </div>
 
               <div className="input-wrapper">

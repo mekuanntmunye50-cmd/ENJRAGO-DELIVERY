@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { apiRequest } from "@/lib/api";
 
 type OrderSummary = {
   id: string;
@@ -24,32 +24,17 @@ export default function OrdersPage() {
 
     async function loadOrders() {
       try {
-        const supabase = createClient();
-        const { data: authData, error: authError } = await supabase.auth.getUser();
-
-        if (authError) {
-          throw authError;
-        }
-
-        if (!authData.user) {
-          router.replace("/login");
-          return;
-        }
-
-        const { data, error: ordersError } = await supabase
-          .from("orders")
-          .select("id, status, total, created_at, order_items(food_name, quantity)")
-          .order("created_at", { ascending: false });
-
-        if (ordersError) {
-          throw ordersError;
-        }
+        const { orders } = await apiRequest<{ orders: OrderSummary[] }>("/api/orders");
 
         if (isMounted) {
-          setOrders(data);
+          setOrders(orders);
         }
       } catch (caughtError) {
         if (isMounted) {
+          if (caughtError instanceof Error && caughtError.message === "Please sign in to view your orders.") {
+            router.replace("/login");
+            return;
+          }
           setError(
             caughtError instanceof Error
               ? caughtError.message

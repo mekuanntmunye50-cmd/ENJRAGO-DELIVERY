@@ -1,12 +1,41 @@
 "use client";
 
+"use client";
+
 import Link from "next/link";
-import { menuItems } from "@/data/menu";
+import { useEffect, useState } from "react";
+import type { MenuItem } from "@/data/menu";
 import { useCart } from "@/app/cart/CartContext";
+import { apiRequest } from "@/lib/api";
 
 export default function PopularFoods() {
   const { addItem } = useCart();
-  const foods = menuItems.slice(0, 3);
+  const [foods, setFoods] = useState<MenuItem[]>([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    apiRequest<{ menuItems: MenuItem[] }>("/api/catalog")
+      .then(({ menuItems }) => {
+        if (isMounted) {
+          setFoods(menuItems.slice(0, 3));
+        }
+      })
+      .catch((caughtError: unknown) => {
+        if (isMounted) {
+          setError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Could not load menu items."
+          );
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <section className="section popular-section">
@@ -22,8 +51,11 @@ export default function PopularFoods() {
           </Link>
         </div>
 
-        <div className="food-grid">
-          {foods.map((food) => (
+        {error ? (
+          <p role="alert" className="text-sm text-red-700">{error}</p>
+        ) : (
+          <div className="food-grid">
+            {foods.map((food) => (
             <article className="food-card" key={food.id}>
               <Link href={`/food/${food.id}`} className="food-image">
                 <img src={food.image} alt={food.name} />
@@ -60,8 +92,9 @@ export default function PopularFoods() {
                 </Link>
               </div>
             </article>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

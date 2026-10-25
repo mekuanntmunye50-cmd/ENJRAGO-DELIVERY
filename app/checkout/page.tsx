@@ -5,7 +5,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "../cart/CartContext";
-import { createClient } from "@/lib/supabase/client";
+import { apiRequest } from "@/lib/api";
 
 type CheckoutForm = {
   fullName: string;
@@ -106,45 +106,21 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
-      const supabase = createClient();
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-
-      if (authError) {
-        throw authError;
-      }
-
-      if (!authData.user) {
-        setSubmitError("Please sign in before placing your order.");
-        return;
-      }
-
-      const { data: orderId, error: orderError } = await supabase.rpc(
-        "create_customer_order",
-        {
-          p_full_name: form.fullName.trim(),
-          p_phone: form.phone.trim(),
-          p_city: form.city.trim(),
-          p_area: form.area.trim(),
-          p_street_address: form.streetAddress.trim(),
-          p_instructions: form.instructions.trim(),
-          p_items: items.map(({ id, quantity }) => ({
-            food_id: id,
-            quantity,
-          })),
-        }
-      );
-
-      if (orderError) {
-        throw orderError;
-      }
-
-      if (typeof orderId !== "string") {
-        throw new Error("The order was created without a valid order ID.");
-      }
+      const { orderId } = await apiRequest<{ orderId: string }>("/api/orders", {
+        method: "POST",
+        body: JSON.stringify({
+          ...form,
+          items: items.map(({ id, quantity }) => ({ id, quantity })),
+        }),
+      });
 
       clearCart();
       router.push(`/orders/${orderId}`);
     } catch (error) {
+      if (error instanceof Error && error.message === "Please sign in before placing your order.") {
+        setSubmitError("Please sign in before placing your order.");
+        return;
+      }
       setSubmitError(
         error instanceof Error
           ? error.message

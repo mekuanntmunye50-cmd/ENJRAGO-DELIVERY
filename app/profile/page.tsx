@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { apiRequest } from "@/lib/api";
 
 const accountCards: { title: string; action: string; href?: string }[] = [
   { title: "Order History", action: "View details", href: "/orders" },
@@ -27,30 +27,25 @@ export default function ProfilePage() {
 
     async function loadProfile() {
       try {
-        const supabase = createClient();
-        const { data, error } = await supabase.auth.getUser();
+        const { user } = await apiRequest<{
+          user: { email: string; fullName: string };
+        }>("/api/auth/me");
 
         if (!isMounted) return;
 
-        if (error) {
-          throw error;
-        }
-
-        if (!data.user) {
-          router.replace("/login");
-          return;
-        }
-
-        const fullName = data.user.user_metadata?.full_name || data.user.email?.split("@", 1)[0] || "Customer";
-        setUserName(fullName);
-        setEmail(data.user.email || "No email provided");
+        setUserName(user.fullName);
+        setEmail(user.email);
       } catch (error) {
         if (isMounted) {
-          setProfileError(
-            error instanceof Error
-              ? error.message
-              : "Could not load your account details."
-          );
+          if (error instanceof Error && error.message === "You are not signed in.") {
+            router.replace("/login");
+          } else {
+            setProfileError(
+              error instanceof Error
+                ? error.message
+                : "Could not load your account details."
+            );
+          }
         }
       }
     }
@@ -66,12 +61,7 @@ export default function ProfilePage() {
     setSigningOut(true);
 
     try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        throw error;
-      }
+      await apiRequest("/api/auth/logout", { method: "POST" });
 
       router.replace("/login");
       router.refresh();

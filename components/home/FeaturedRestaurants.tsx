@@ -1,8 +1,39 @@
 
+"use client";
+
 import Link from "next/link";
-import { restaurants } from "@/data/restaurants";
+import { useEffect, useState } from "react";
+import type { Restaurant } from "@/data/restaurants";
+import { apiRequest } from "@/lib/api";
 
 export default function FeaturedRestaurants() {
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    apiRequest<{ restaurants: Restaurant[] }>("/api/catalog")
+      .then(({ restaurants: catalog }) => {
+        if (isMounted) {
+          setRestaurants(catalog.filter((restaurant) => restaurant.featured));
+        }
+      })
+      .catch((caughtError: unknown) => {
+        if (isMounted) {
+          setError(
+            caughtError instanceof Error
+              ? caughtError.message
+              : "Could not load featured restaurants."
+          );
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <section className="section featured-section">
       <div className="container">
@@ -18,10 +49,11 @@ export default function FeaturedRestaurants() {
           </Link>
         </div>
 
-        <div className="restaurant-grid">
-          {restaurants
-            .filter((restaurant) => restaurant.featured)
-            .map((restaurant) => (
+        {error ? (
+          <p role="alert" className="text-sm text-red-700">{error}</p>
+        ) : (
+          <div className="restaurant-grid">
+            {restaurants.map((restaurant) => (
               <article className="restaurant-card" key={restaurant.id}>
                 <Link
                   href={`/restaurant/${restaurant.id}`}
@@ -53,7 +85,8 @@ export default function FeaturedRestaurants() {
                 </div>
               </article>
             ))}
-        </div>
+          </div>
+        )}
       </div>
     </section>
   );

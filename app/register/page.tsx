@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import OAuthButtons from "@/components/auth/OAuthButtons";
-import { createClient } from "@/lib/supabase/client";
+import { apiRequest } from "@/lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -17,12 +16,25 @@ export default function RegisterPage() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    setMessage("");
+
+    if (fullName.trim().length < 2) {
+      setError("Please enter your full name.");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (password.length < 8) {
+      setError("Your password must be at least 8 characters.");
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError("Your passwords do not match.");
@@ -37,28 +49,17 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      const supabase = createClient();
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: { full_name: fullName.trim() },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
+      await apiRequest("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({
+          fullName: fullName.trim(),
+          email: email.trim(),
+          password,
+        }),
       });
 
-      if (signUpError) {
-        setError(signUpError.message);
-        return;
-      }
-
-      if (data.session) {
-        router.replace("/profile");
-        router.refresh();
-        return;
-      }
-
-      setMessage("Check your email to confirm your account, then sign in.");
+      router.replace("/profile");
+      router.refresh();
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
@@ -239,12 +240,6 @@ export default function RegisterPage() {
                 </div>
               )}
 
-              {message && (
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
-                  {message}
-                </div>
-              )}
-
               <label className="flex items-center gap-3 pt-2 text-sm text-[#374b46]">
                 <input
                   type="checkbox"
@@ -265,13 +260,9 @@ export default function RegisterPage() {
                 {loading ? "Signing Up..." : "Sign Up"}
               </button>
 
-              <div className="mt-6 flex items-center justify-center gap-4 text-[#6a7874]">
-                <span className="h-px flex-1 bg-[#d5d4d1]" />
-                <span className="text-sm uppercase tracking-[0.18em]">or sign up with</span>
-                <span className="h-px flex-1 bg-[#d5d4d1]" />
-              </div>
-
-              <OAuthButtons />
+              <p className="text-center text-xs text-[#6a7874]">
+                Your account is stored securely in the app database.
+              </p>
             </form>
 
             <p className="mt-8 text-center text-sm text-[#475d58]">
